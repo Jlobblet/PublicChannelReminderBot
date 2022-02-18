@@ -10,6 +10,7 @@ open System.Threading.Tasks
 open DisCatSharp
 open DisCatSharp.Entities
 open DisCatSharp.EventArgs
+open PublicChannelReminderBot.Settings
 
 // These aliases make the following types easier to reason about
 type GuildId = uint64
@@ -56,10 +57,6 @@ type Cache =
 
 [<RequireQualifiedAccess>]
 module Cache =
-    let private keepDuration = TimeSpan.FromSeconds 60
-    let private reminderInterval = TimeSpan.FromMinutes 30
-    let private maxMessageCount = 12
-
     let private reminderText =
         "https://cdn.discordapp.com/attachments/292281159495450625/942136988742590514/unknown.png"
 
@@ -78,13 +75,13 @@ module Cache =
 
     let messageCreated cache (_: DiscordClient) (args: MessageCreateEventArgs) = addMessage cache args.Message
 
-    let createDefault client =
+    let createDefault client settings =
         { Client = client
           CacheDictionary = CacheDictionary.createDefault()
           Cancel = new CancellationTokenSource()
-          KeepDuration = keepDuration
-          ReminderInterval = reminderInterval
-          MaxMessageCount = maxMessageCount }
+          KeepDuration = settings.MessageKeepDuration
+          ReminderInterval = settings.ReminderInterval
+          MaxMessageCount = settings.MaxMessageCount }
 
     let sendReminder cache guildId channelId =
         cache

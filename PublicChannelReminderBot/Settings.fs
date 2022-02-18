@@ -32,10 +32,16 @@ type IServiceCollection with
 [<NoComparison>]
 type Arguments =
     | [<ExactlyOnce>] DiscordToken of DiscordToken: string
+    | MessageKeepDuration of int
+    | ReminderInterval of int
+    | MessagesToRemind of int
     interface IArgParserTemplate with
         member this.Usage =
             match this with
             | DiscordToken _ -> ""
+            | MessageKeepDuration _ -> ""
+            | ReminderInterval _ -> ""
+            | MessagesToRemind _ -> ""
 
 
 let errorHandler =
@@ -51,6 +57,9 @@ let Parser = ArgumentParser.Create<Arguments>(errorHandler = errorHandler)
 [<NoComparison>]
 type Settings =
     { DiscordToken: string
+      MessageKeepDuration: TimeSpan
+      ReminderInterval: TimeSpan
+      MaxMessageCount: int
       Configuration: IConfiguration }
 
 [<RequireQualifiedAccess>]
@@ -66,8 +75,25 @@ module Settings =
 
         let results =
             Parser.Parse(inputs = argv, configurationReader = HostedConfigurationReader(config))
+            
+        let discordToken = results.GetResult <@ DiscordToken @>
+        
+        let messageKeepDuration =
+            results.TryGetResult <@ MessageKeepDuration @>
+            |> Option.fold (fun _ -> TimeSpan.FromSeconds) (TimeSpan.FromSeconds 60)
+            
+        let reminderInterval =
+            results.TryGetResult <@ ReminderInterval @>
+            |> Option.fold (fun _ -> TimeSpan.FromMinutes) (TimeSpan.FromMinutes 30)
+            
+        let maxMessageCount =
+            results.TryGetResult <@ MessagesToRemind @>
+            |> Option.defaultValue 12
 
-        { DiscordToken = results.GetResult <@ DiscordToken @>
+        { DiscordToken = discordToken
+          MessageKeepDuration = messageKeepDuration
+          ReminderInterval = reminderInterval
+          MaxMessageCount = maxMessageCount
           Configuration = config }
 
 type KillSwitch = { Token: CancellationToken }
